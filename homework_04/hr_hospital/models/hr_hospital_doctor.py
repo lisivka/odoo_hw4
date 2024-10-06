@@ -10,6 +10,15 @@ class Doctor(models.Model):
     _name = 'hr.hospital.doctor'
     _description = 'Doctor'
 
+    is_intern = fields.Boolean(string="Intern")
+    intern_ids = fields.One2many('hr.hospital.doctor',
+                                 'mentor_id', )
+    diagnosis_ids = fields.One2many('hr.hospital.diagnosis',
+                                    'doctor_id',
+                                    )
+    mentor_id = fields.Many2one('hr.hospital.doctor', )
+    mentor_specialty = fields.Char(compute='_compute_mentor_info')
+    mentor_phone = fields.Char(compute='_compute_mentor_info')
     specialty = fields.Selection(
         selection=[
             ("cardiologist", "Cardiologist"),
@@ -25,11 +34,19 @@ class Doctor(models.Model):
             ('other', "other")
         ], default='other')
 
-    visit_ids = fields.One2many('hr.hospital.visit', 'doctor_id',
-                                string='Visits')
+    visit_ids = fields.One2many('hr.hospital.visit',
+                                'doctor_id',
+                                )
 
-    is_intern = fields.Boolean(string="Intern")
-    mentor_id = fields.Many2one('hr.hospital.doctor', string="Mentor")
+    @api.depends('mentor_id')
+    def _compute_mentor_info(self):
+        for doctor in self:
+            if doctor.mentor_id:
+                doctor.mentor_specialty = doctor.mentor_id.specialty
+                doctor.mentor_phone = doctor.mentor_id.phone
+            else:
+                doctor.mentor_specialty = ''
+                doctor.mentor_phone = ''
 
     @api.onchange('is_intern')
     def _onchange_is_intern(self):
@@ -52,22 +69,35 @@ class Doctor(models.Model):
                 raise exceptions.ValidationError(
                     _("Не вибирайте ментора для лікаря, який не є інтерном."))
 
-    @api.model
-    def fields_view_get(self, view_id=None, view_type='form', toolbar=False,
-                        submenu=False):
-        """Налаштовуємо форму, щоб поле 'mentor_id'
-        відображалося лише якщо лікар інтерн"""
-        res = super(Doctor, self).fields_view_get(view_id=view_id,
-                                                  view_type=view_type,
-                                                  toolbar=toolbar,
-                                                  submenu=submenu)
-        if view_type == 'form':
-            doc = res['arch']
-            if 'is_intern' in doc:
-                doc = doc.replace(
-                    '<field name="mentor_id"/>',
-                    '''<field name="mentor_id" attrs="{'invisible':
-                    [('is_intern', '=', False)]}"/>'''
-                )
+    def action_open_report_wizard(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Print Diagnosis Report',
+            'res_model': 'report.diagnosis.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_doctor_ids': [self.id]},
+        }
 
-        return res
+    def create_quick_visit(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Create Visit',
+            'res_model': 'hr.hospital.visit',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_doctor_id': self.id, },
+        }
+
+    # Відкриття форми запису до лікаря
+    def open_visit_form(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Запис до лікаря',
+            'res_model': 'hr.hospital.visit',
+            'view_mode': 'form',
+            'context': {
+                'default_doctor_id': self.id,
+            },
+            'target': 'new',
+        }

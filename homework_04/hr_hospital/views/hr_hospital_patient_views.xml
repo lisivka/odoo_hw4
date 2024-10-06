@@ -1,9 +1,23 @@
 <odoo>
+
+    <record id="action_patient" model="ir.actions.act_window">
+        <field name="name">Patients</field>
+        <field name="res_model">hr.hospital.patient</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Patient Form View -->
     <record id="view_patient_form" model="ir.ui.view">
         <field name="name">hr.hospital.patient.form</field>
         <field name="model">hr.hospital.patient</field>
         <field name="arch" type="xml">
             <form>
+                <header>
+                    <button name="action_all_visits" string="All Visit"
+                            type="object" class="btn-primary"/>
+                    <button name="action_create_visit" string="Create Visit"
+                            type="object" class="btn-primary"/>
+                </header>
                 <sheet>
                     <group>
                         <group>
@@ -21,9 +35,20 @@
                             <field name="contact_person"/>
                         </group>
                     </group>
+
                     <notebook>
+                        <page string="Diagnoses">
+                            <field name="diagnosis_ids"
+                                   widget="one2many_list"
+                                   readonly="1"
+                                   domain="[('doctor_id', '=', id)]"/>
+                        </page>
                         <page string="Visits">
-                            <field name="visit_ids" widget="one2many_list"/>
+                            <field name="visit_ids"
+                                   widget="one2many_list"
+                                   readonly="1">
+
+                            </field>
                         </page>
                     </notebook>
                 </sheet>
@@ -31,6 +56,8 @@
         </field>
     </record>
 
+
+    <!-- Patient Tree View -->
     <record id="view_patient_tree" model="ir.ui.view">
         <field name="name">hr.hospital.patient.tree</field>
         <field name="model">hr.hospital.patient</field>
@@ -46,9 +73,35 @@
         </field>
     </record>
 
-    <record id="action_patient" model="ir.actions.act_window">
-        <field name="name">Patients</field>
-        <field name="res_model">hr.hospital.patient</field>
-        <field name="view_mode">tree,form</field>
+    <!-- Search View -->
+    <record id="view_patient_search" model="ir.ui.view">
+        <field name="name">hr.hospital.patient.search</field>
+        <field name="model">hr.hospital.patient</field>
+        <field name="arch" type="xml">
+            <search>
+                <!-- Поля для пошуку -->
+                <field name="first_name"/>
+                <field name="last_name"/>
+                <field name="phone"/>
+
+                <!-- Фільтри -->
+                <filter string="Has Personal Doctor" name="has_personal_doctor"
+                        domain="[('personal_doctor_id', '!=', False)]"/>
+                <filter string="No Personal Doctor" name="no_personal_doctor"
+                        domain="[('personal_doctor_id', '=', False)]"/>
+                <!-- Групування -->
+                <group expand="1" string="Group By">
+                    <filter string="Personal Doctor"
+                            name="group_by_personal_doctor"
+                            context="{'group_by':'personal_doctor_id'}"/>
+                </group>
+                <group expand="1" string="Group By">
+                    <filter string="Gender"
+                            name="group_by_gender"
+                            context="{'group_by':'gender'}"/>
+                </group>
+            </search>
+        </field>
     </record>
+
 </odoo>
